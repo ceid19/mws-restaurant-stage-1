@@ -148,9 +148,10 @@ class DBHelper {
 
   /**
    * Restaurant image URL.
+   * !!Changed to get the responsive images path!!
    */
   static imageUrlForRestaurant(restaurant) {
-    return (`/img/${restaurant.photograph}`);
+    return (`/responsive_images/${restaurant.photograph}`);
   }
 
   /**

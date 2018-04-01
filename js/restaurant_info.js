@@ -9,11 +9,17 @@ window.initMap = () => {
     if (error) { // Got an error!
       console.error(error);
     } else {
-      self.map = new google.maps.Map(document.getElementById('map'), {
-        zoom: 16,
-        center: restaurant.latlng,
-        scrollwheel: false
-      });
+		try {
+			
+		  self.map = new google.maps.Map(document.getElementById('map'), {
+			zoom: 16,
+			center: restaurant.latlng,
+			scrollwheel: false
+		  });
+		  
+		} catch (error) {
+			console.log('Load of google map failed');
+		}
       fillBreadcrumb();
       DBHelper.mapMarkerForRestaurant(self.restaurant, self.map);
     }
@@ -54,10 +60,39 @@ fillRestaurantHTML = (restaurant = self.restaurant) => {
 
   const address = document.getElementById('restaurant-address');
   address.innerHTML = restaurant.address;
-
-  const image = document.getElementById('restaurant-img');
-  image.className = 'restaurant-img'
-  image.src = DBHelper.imageUrlForRestaurant(restaurant);
+  
+  const figure = document.getElementById('restaurant-img');
+  
+  // Create responsive image
+  const picture = document.createElement('picture');
+  figure.prepend(picture);
+  
+  const image_prefix = DBHelper.imageUrlForRestaurant(restaurant).replace('.jpg','');
+  
+  let source = document.createElement('source');
+  source.srcset = `${image_prefix}-800_large_1x.jpg 1x,${image_prefix}-800_large_2x.jpg 2x`;
+  source.media = "(min-width: 1400px)";
+  picture.appendChild(source);
+  
+  source = document.createElement('source');
+  source.srcset = `${image_prefix}-400_small_1x.jpg 1x,${image_prefix}-400_small_2x.jpg 2x`;
+  source.media = "(max-width: 400px)";
+  picture.appendChild(source);
+  
+  source = document.createElement('source');
+  source.srcset = `${image_prefix}-400_small_1x.jpg 1x,${image_prefix}-400_small_2x.jpg 2x`;
+  source.media = "(min-width: 1000px) and (max-width: 1399px)";
+  picture.appendChild(source);
+  
+  source = document.createElement('source');
+  source.srcset = `${image_prefix}-800_large_1x.jpg 1x,${image_prefix}-800_large_2x.jpg 2x`;
+  source.media = "(min-width: 401px) and (max-width: 999px)";
+  picture.appendChild(source);
+ 
+  const image = document.createElement('img');
+  image.alt = `${restaurant.name} Restaurant Image`;
+  image.src = `${image_prefix}-400_small_1x.jpg`;
+  picture.appendChild(image);
 
   const cuisine = document.getElementById('restaurant-cuisine');
   cuisine.innerHTML = restaurant.cuisine_type;
@@ -117,21 +152,38 @@ fillReviewsHTML = (reviews = self.restaurant.reviews) => {
  */
 createReviewHTML = (review) => {
   const li = document.createElement('li');
+  
+  const article = document.createElement('article');
+  li.appendChild(article);
+  
+  const title = document.createElement('header');
+  title.className = 'review-title';
+  
+  article.appendChild(title);
+  
   const name = document.createElement('p');
   name.innerHTML = review.name;
-  li.appendChild(name);
+  title.appendChild(name);
 
   const date = document.createElement('p');
   date.innerHTML = review.date;
-  li.appendChild(date);
+  title.appendChild(date);
+  
+  const clear = document.createElement('div');
+  title.appendChild(clear);
+  
+  const review_div = document.createElement('div');
+  review_div.className = 'review-content';
+  article.appendChild(review_div);
 
   const rating = document.createElement('p');
   rating.innerHTML = `Rating: ${review.rating}`;
-  li.appendChild(rating);
+  rating.className = 'review-rating';
+  review_div.appendChild(rating);
 
   const comments = document.createElement('p');
   comments.innerHTML = review.comments;
-  li.appendChild(comments);
+  review_div.appendChild(comments);
 
   return li;
 }
