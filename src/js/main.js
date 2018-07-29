@@ -6,7 +6,20 @@ var map
 var markers = []
 
 window.addEventListener("scroll", () => {
-  DBHelper.lazyLoadImages();
+  jsHelper.lazyLoadImages();
+  jsHelper.lazyLoadMap();
+});
+
+window.addEventListener('load', function() {
+    
+  if (!navigator.serviceWorker) return;
+
+  navigator.serviceWorker.register('/sw.js', { scope: '/' })
+  .then(() =>{
+    console.log('Registration successfull');
+  })
+  .catch(() => {console.log('SW Registration failed');});
+
 });
 
 /**
@@ -142,7 +155,7 @@ fillRestaurantsHTML = (restaurants = self.restaurants, callback) => {
   });
   addMarkersToMap();
 
-  DBHelper.lazyLoadImages();
+  jsHelper.lazyLoadImages();
 }
 
 /**

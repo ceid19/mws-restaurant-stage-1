@@ -9,14 +9,17 @@ class DBHelper {
    */
   static get DATABASE_URL() {
     const port = 1337 // Change this to your server port
-    return `http://localhost:${port}/restaurants`;
+    return { 
+      restaurants:`http://localhost:${port}/restaurants`,
+      reviews: `http://localhost:${port}/reviews`,
+    };
   }
 
   /**
    * Fetch all restaurants.
    */
   static fetchRestaurants(callback) {
-    return fetch(DBHelper.DATABASE_URL)
+    return fetch(DBHelper.DATABASE_URL.restaurants)
       .then(restaurants => {
         restaurants.json().then(json => {
           callback(null, json);
@@ -32,7 +35,7 @@ class DBHelper {
    */
   static fetchRestaurantById(id, callback) {
     // fetch all restaurants with proper error handling.
-    return fetch(`${DBHelper.DATABASE_URL}/${id}`)
+    return fetch(`${DBHelper.DATABASE_URL.restaurants}/${id}`)
       .then(restaurant => {
         restaurant.json().then(json => {
           callback(null, json);
@@ -162,60 +165,113 @@ class DBHelper {
       title: restaurant.name,
       url: DBHelper.urlForRestaurant(restaurant),
       map: map,
-      animation: google.maps.Animation.DROP}
-    );
+      animation: google.maps.Animation.DROP
+    });
     return marker;
   }
 
   /**
-   * Lazy loads pictures so app can be faster
+   * Fetches reviews
+   * @param {*} callback 
    */
-  static lazyLoadImages() {
+  static fetchReviews(callback) {
+    return fetch(DBHelper.DATABASE_URL.reviews)
+      .then(reviews => {
+        reviews.json().then(json => {
+          callback(null, json);
+        })
+      })
+      .catch(error => {
+        console.log(error);
+      })
+  }
 
-    var pictures = Array.from(document.getElementsByTagName('picture'));
+  /**
+   * Fetches reviews by restaurant id
+   * @param {*} restaurant_id 
+   * @param {*} callback 
+   */
+  static fetchReviewsByRestaurantId(restaurant_id,callback) {
+    return fetch(`${DBHelper.DATABASE_URL.reviews}/?restaurant_id=${restaurant_id}`)
+    .then(reviews => {
+      reviews.json().then(json => {
+        callback(null, json);
+      })
+    })
+    .catch(error => {
+      console.log(error);
+    })
+  }
 
-    pictures.forEach(picture => {
+  /**
+   * Submits new review
+   * 
+   * @param {*} callback 
+   */
+  static submitReview(callback) {
 
-      if(this.isInViewport(picture)) {
+    return fetch(DBHelper.DATABASE_URL.reviews, {
+      headers: {
 
-        var sources = Array.from(picture.getElementsByTagName('source'));
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+        "Connection": "keep-alive",
+        "Content-Length": `${jsHelper.serializeObject(jsHelper.getFormValues()).length}`,
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      method: 'post',
+      body: jsHelper.serializeObject(jsHelper.getFormValues())
 
-        sources.forEach(source => {
-          if(!source.getAttribute('srcset')) {
-            source.setAttribute('srcset', source.getAttribute('data-srcset'));
-          }
-        });
+    }).then(response => {
 
-        var images = Array.from(picture.getElementsByTagName('img'));
+      callback();
+    }).catch(error => {
 
-        images.forEach(img => {
-          
-          if(!img.getAttribute('src')) {
-            img.setAttribute('src', img.getAttribute('data-src'));
-          }
-          
-          img.addEventListener('load',()=>{
+      if('SyncManager' in window) {
 
-            img.removeAttribute('data-src');
-
-            sources.forEach(source => {
-                source.removeAttribute('data-srcset');
-            });
-          });      
-        });   
-      }    
+        navigator.serviceWorker.ready.then(swr=>{
+          console.log('Sw ready');
+          return swr.pushManager.getSubscription();
+        })
+        .then(subscription =>{
+    
+          return navigator.serviceWorker.controller.postMessage({
+            url: DBHelper.DATABASE_URL.reviews,
+            formData: jsHelper.getFormValues(),
+            type: 'create-review',
+            method: 'POST'
+          });
+  
+        }).then(() => {
+          callback();
+        })
+        .catch(error => {
+          console.log(error); 
+          return;
+        })
+    
+      } else {
+        console.log(error); 
+        return;
+      }
     });
   }
 
-  static isInViewport (elem) {
+  /**
+   * Marks restaurant as favorite
+   */
+  static markAsFavorite() {
 
-    var bounding = elem.getBoundingClientRect();
+    let is_favorite = '/'+jsHelper.getParameterByName('id')+'/?is_favorite=false';
+    if(document.getElementById('is_favorite').checked) {
+      is_favorite = '/'+jsHelper.getParameterByName('id')+'/?is_favorite=true';
+    }
 
-    return (
-        bounding.top >= 0 &&
-        bounding.left >= 0 &&
-        bounding.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-        bounding.right <= (window.innerWidth || document.documentElement.clientWidth)
-    );
-};
+    return fetch(DBHelper.DATABASE_URL.restaurants+is_favorite, {
+      method: 'put',
+    }).then(response => {
+
+    }).catch(error => {      
+    });
+  }
 }
+
